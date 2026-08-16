@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Pinboard | Campus Lost & Found</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>The Pinboard</h1>
+        <p>Campus Lost & Found • Est. by students, for students</p>
+        <nav class="main-nav">
+            <a href="portal.html">Main Feed</a> |
+            <a href="user.html">My Profile</a>
+        </nav>
+    </header>
+
+    <section>
+        <p>Sign in with your college email to post or browse lost & found items.</p>
+        <div style="margin-top: 1rem;" id="authButtons">
+            <a href="login.html"><button>Log In</button></a>
+            <a href="signup.html"><button>Sign Up</button></a>
+        </div>
+    </section>
+
+    <section>
+        <h2>The Pinboard</h2>
+        <p>
+            Left your charger in the library? Found someone's ID near the canteen?
+            Post it here — every entry is a real lead.
+        </p>
+        <div style="margin: 1rem 0;">
+            <a href="found.html"><button>📌 I Found Something</button></a>
+            <a href="lost.html"><button>🔍 I Lost Something</button></a>
+        </div>
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search by item, location, or keyword">
+
+        <select id="sortSelect">
+            <option value="NEWEST">Newest First</option>
+            <option value="OLDEST">Oldest First</option>
+        </select>
+
+        <div class="filter-container">
+            <button class="filter-btn active" data-filter="ALL">All Posts</button>
+            <button class="filter-btn" data-filter="LOST">Lost Items</button>
+            <button class="filter-btn" data-filter="FOUND">Found Items</button>
+            <button class="filter-btn" data-filter="CLAIMED">Claimed Items</button>
+        </div>
+    </section>
+
+    <section>
+        <main>
+            <h2>Recent Posts</h2>
+            <div id="postsContainer"></div>
+        </main>
+    </section>
+
+    <section>
+        <h2>How it Works</h2>
+        <ol>
+            <li>Create an account using your college email.</li>
+            <li>Post an item you've found or lost.</li>
+            <li>Browse the board or search for your item.</li>
+            <li>Contact the other person to return the item safely.</li>
+            <li>Mark the item as claimed once it's returned.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>Community Guidelines</h2>
+        <ul>
+            <li>Only post genuine lost or found items.</li>
+            <li>Use your college email.</li>
+            <li>Do not post fake listings.</li>
+            <li>Meet in safe public places while returning items.</li>
+            <li>Respect everyone's privacy.</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>Built for campus use • Be honest, be kind — it's somebody's stuff.</p>
+        <p>© 2026 The Pinboard</p>
+    </footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", async function () {
+    let allItems = [];
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    const authButtons = document.getElementById("authButtons");
+
+    if (user && authButtons) {
+        authButtons.innerHTML = `
+            <a href="user.html"><button style="background-color: var(--primary-color);">👤 My Profile (${user.fullname})</button></a>
+        `;
+    }
+
+    const postsContainer = document.getElementById("postsContainer");
+    const filterButtons = document.querySelectorAll(".filter-btn");
+    const searchInput = document.getElementById("searchInput");
+    const sortSelect = document.getElementById("sortSelect");
+
+    function renderItems(itemsToDisplay) {
+        if (!postsContainer) return;
+
+        if (itemsToDisplay.length === 0) {
+            postsContainer.innerHTML = "<p>No posts found in this section.</p>";
+            return;
+        }
+
+        postsContainer.innerHTML = itemsToDisplay.map(item => `
+            <article class="post-card">
+                <div>
+                    <h3>${item.type === 'FOUND' ? '🎒 FOUND:' : '🔍 LOST:'} ${item.item_name}</h3>
+                    <p><strong>Status:</strong> ${item.status || 'ACTIVE'}</p>
+                    <p><strong>Category:</strong> ${item.category || 'N/A'}</p>
+                    <p><strong>Location:</strong> ${item.location}</p>
+                    <p><strong>Date:</strong> ${new Date(item.item_date).toLocaleDateString()}</p>
+                    <p>${item.description || ''}</p>
+                </div>
+                <p style="margin-top: 1rem;"><strong>Contact:</strong> ${item.contact}</p>
+            </article>
+        `).join("");
+    }
+
+    function applyFiltersAndSearch() {
+        let result = [...allItems];
+
+        const activeBtn = document.querySelector(".filter-btn.active");
+        const filterType = activeBtn ? activeBtn.getAttribute("data-filter").trim().toUpperCase() : "ALL";
+
+        if (filterType === "CLAIMED") {
+            result = result.filter(item => item.status && item.status.toUpperCase() === "CLAIMED");
+        } else if (filterType !== "ALL") {
+            result = result.filter(item => 
+                item.type && item.type.toUpperCase() === filterType && 
+                item.status && item.status.toUpperCase() !== "CLAIMED"
+            );
+        }
+
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
+        if (searchTerm) {
+            result = result.filter(item => {
+                const name = (item.item_name || "").toLowerCase();
+                const location = (item.location || "").toLowerCase();
+                const desc = (item.description || "").toLowerCase();
+                const cat = (item.category || "").toLowerCase();
+                return name.includes(searchTerm) || location.includes(searchTerm) || desc.includes(searchTerm) || cat.includes(searchTerm);
+            });
+        }
+
+        const sortOrder = sortSelect ? sortSelect.value : "NEWEST";
+        result.sort((a, b) => {
+            const dateA = new Date(a.item_date || a.created_at);
+            const dateB = new Date(b.item_date || b.created_at);
+            return sortOrder === "OLDEST" ? dateA - dateB : dateB - dateA;
+        });
+
+        renderItems(result);
+    }
+
+    try {
+        const response = await fetch("/api/items");
+        if (response.ok) {
+            allItems = await response.json();
+            applyFiltersAndSearch();
+        }
+    } catch (error) {
+        console.error("Error fetching items:", error);
+    }
+
+    filterButtons.forEach(button => {
+        button.addEventListener("click", function () {
+            filterButtons.forEach(btn => btn.classList.remove("active"));
+            this.classList.add("active");
+            applyFiltersAndSearch();
+        });
+    });
+
+    if (searchInput) searchInput.addEventListener("input", applyFiltersAndSearch);
+    if (sortSelect) sortSelect.addEventListener("change", applyFiltersAndSearch);
+});
+</script>
+
+</body>
+</html>

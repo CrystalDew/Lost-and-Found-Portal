@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>I Found Something | The Pinboard</title>
+</head>
+
+<body>
+
+    <header>
+        <h1>The Pinboard</h1>
+        <p>Campus Lost & Found</p>
+    </header>
+
+    <hr>
+
+    <main>
+
+        <section>
+
+            <h2>📌 I Found Something</h2>
+
+            <p>
+                Fill in the details below so the rightful owner can find their item.
+            </p>
+
+            <form action="portal.html">
+
+                <div>
+                    <label for="itemName">Item Name</label><br>
+                    <input
+                        type="text"
+                        id="itemName"
+                        name="itemName"
+                        placeholder="e.g. Black Wallet"
+                        required>
+                </div>
+
+                <br>
+
+                <div>
+                    <label for="category">Category</label><br>
+
+                    <select id="category" name="category" required>
+                        <option value="">Select Category</option>
+                        <option>Bags</option>
+                        <option>Electronics</option>
+                        <option>ID Card</option>
+                        <option>Books</option>
+                        <option>Keys</option>
+                        <option>Clothing</option>
+                        <option>Water Bottle</option>
+                        <option>Others</option>
+                    </select>
+                </div>
+
+                <br>
+
+                <div>
+                    <label for="location">Location Found</label><br>
+                    <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        placeholder="e.g. Library, Canteen"
+                        required>
+                </div>
+
+                <br>
+
+                <div>
+                    <label for="date">Date Found</label><br>
+                    <input
+                        type="date"
+                        id="date"
+                        name="date"
+                        required>
+                </div>
+
+                <br>
+
+                <div>
+                    <label for="time">Time Found</label><br>
+                    <input
+                        type="time"
+                        id="time"
+                        name="time">
+                </div>
+
+                <br>
+
+                <div>
+                    <label for="description">Description</label><br>
+
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="5"
+                        cols="40"
+                        placeholder="Describe the item, colour, brand, unique marks, etc."
+                        required></textarea>
+                </div>
+
+                <br>
+
+                <div>
+                    <label for="photo">Upload Image</label><br>
+                    <input
+                        type="file"
+                        id="photo"
+                        name="photo"
+                        accept="image/*">
+                </div>
+
+                <br>
+
+                <div>
+                    <label for="contact">Your Contact Number</label><br>
+                    <input
+                        type="tel"
+                        id="contact"
+                        name="contact"
+                        placeholder="Enter phone number"
+                        required>
+                </div>
+
+                <br>
+
+                <button type="submit">
+                    Submit Found Item
+                </button>
+
+                <button type="reset">
+                    Clear Form
+                </button>
+
+            </form>
+
+            <br>
+
+            <button onclick="window.location.href='portal.html'">
+                ← Back to Home
+            </button>
+
+        </section>
+
+    </main>
+
+    <hr>
+
+    <footer>
+        <p>© 2026 The Pinboard</p>
+    </footer>
+    <script>
+    document.querySelector("form").addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const isFoundPage = window.location.pathname.includes("found");
+
+        const payload = {
+            title: document.getElementById("itemName").value.trim(),
+            category: document.getElementById("category").value,
+            type: "FOUND",
+            location: document.getElementById("location").value.trim(),
+            item_date: document.getElementById("date").value,
+            item_time: document.getElementById("time").value,
+            description: document.getElementById("description").value.trim(),
+            contact: document.getElementById("contact").value.trim()
+        };
+
+        try {
+            const response = await fetch("/api/items", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert("Item posted successfully!");
+                window.location.href = "portal.html";
+            } else {
+                alert("Failed to submit item.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Server connection error.");
+        }
+    });
+    </script>
+
+</body>
+
+</html>

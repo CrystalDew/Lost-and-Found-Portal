@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | The Pinboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>The Pinboard</h1>
+        <p>Campus Lost & Found • Est. by students, for students</p>
+        <nav class="main-nav">
+            <a href="portal.html">Main Feed</a> |
+            <a href="user.html">My Profile</a>
+        </nav>
+    </header>
+
+    <section>
+        <h2>My Account Details</h2>
+        <div id="userInfo" style="margin-bottom: 1.5rem;">
+            <p><strong>Name:</strong> <span id="userFullname">Loading...</span></p>
+            <p><strong>College Email:</strong> <span id="userEmail">Loading...</span></p>
+            <p><strong>College ID:</strong> <span id="userCollegeId">N/A</span></p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="portal.html"><button style="background-color: var(--primary-color);">📋 Go to Main Feed</button></a>
+            <a href="found.html"><button>📌 Post Found Item</button></a>
+            <a href="lost.html"><button>🔍 Post Lost Item</button></a>
+            <button id="logoutBtn" style="background-color: #ef4444;">Log Out</button>
+        </div>
+    </section>
+
+    <section>
+        <h2>My Posted Items</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Manage your active posts or mark them as claimed once returned.
+        </p>
+        <div id="myPostsContainer">
+            <p>Loading your posts...</p>
+        </div>
+    </section>
+
+    <footer>
+        <p>Built for campus use • Be honest, be kind — it's somebody's stuff.</p>
+        <p>© 2026 The Pinboard</p>
+    </footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", async function () {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user) {
+        alert("Please log in to view your profile.");
+        window.location.href = "login.html";
+        return;
+    }
+
+    document.getElementById("userFullname").textContent = user.fullname || "Student";
+    document.getElementById("userEmail").textContent = user.email || "";
+    document.getElementById("userCollegeId").textContent = user.college_id || "N/A";
+
+    const myPostsContainer = document.getElementById("myPostsContainer");
+
+    async function loadUserPosts() {
+        try {
+            const response = await fetch("/api/items");
+            if (response.ok) {
+                const allItems = await response.json();
+                
+                const myItems = allItems.filter(item => 
+                    (item.contact && item.contact.toLowerCase() === user.email.toLowerCase())
+                );
+
+                renderMyPosts(myItems);
+            }
+        } catch (error) {
+            console.error("Error fetching user posts:", error);
+            myPostsContainer.innerHTML = "<p>Failed to load your posts.</p>";
+        }
+    }
+
+    function renderMyPosts(items) {
+        if (items.length === 0) {
+            myPostsContainer.innerHTML = "<p>You haven't posted any lost or found items yet.</p>";
+            return;
+        }
+
+        myPostsContainer.innerHTML = items.map(item => `
+            <article class="post-card">
+                <div>
+                    <h3>${item.type === 'FOUND' ? '🎒 FOUND:' : '🔍 LOST:'} ${item.item_name}</h3>
+                    <p><strong>Status:</strong> ${item.status || 'ACTIVE'}</p>
+                    <p><strong>Category:</strong> ${item.category || 'N/A'}</p>
+                    <p><strong>Location:</strong> ${item.location}</p>
+                    <p><strong>Date:</strong> ${new Date(item.item_date).toLocaleDateString()}</p>
+                    <p>${item.description || ''}</p>
+                </div>
+                ${item.status !== 'CLAIMED' ? `
+                    <button onclick="markAsClaimed(${item.id})" style="margin-top: 1rem; background-color: #16a34a;">
+                        Mark as Claimed
+                    </button>
+                ` : '<p style="color: #16a34a; font-weight: 600; margin-top: 1rem;">Resolved</p>'}
+            </article>
+        `).join("");
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", function () {
+        localStorage.removeItem("user");
+        window.location.href = "login.html";
+    });
+
+    loadUserPosts();
+});
+
+async function markAsClaimed(itemId) {
+    if (!confirm("Are you sure you want to mark this item as claimed/returned?")) return;
+
+    try {
+        const response = await fetch(`/api/items/${itemId}/claim`, { method: "PUT" });
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert("Failed to update status.");
+        }
+    } catch (err) {
+        console.error("Error updating item status:", err);
+    }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | The Pinboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>The Pinboard</h1>
+        <p>Campus Lost & Found • Est. by students, for students</p>
+        <nav class="main-nav">
+            <a href="portal.html">Main Feed</a> |
+            <a href="login.html">Log In</a> |
+            <a href="signup.html">Sign Up</a>
+        </nav>
+    </header>
+
+    <section style="max-width: 480px;">
+        <h2>Create an Account</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Register with your college credentials to start posting and managing lost or found items.
+        </p>
+
+        <div id="alertMessage" style="display: none; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;"></div>
+
+        <form id="signupForm">
+            <div style="margin-bottom: 1rem;">
+                <label for="fullname" style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem;">Full Name</label>
+                <input 
+                    type="text" 
+                    id="fullname" 
+                    name="fullname" 
+                    placeholder="Alex Morgan" 
+                    required>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label for="college_id" style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem;">College Roll / ID Number</label>
+                <input 
+                    type="text" 
+                    id="college_id" 
+                    name="college_id" 
+                    placeholder="2026-CS-0123" 
+                    required>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label for="email" style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem;">College Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="student@college.edu" 
+                    required>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label for="phone" style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem;">Phone Number (Optional)</label>
+                <input 
+                    type="text" 
+                    id="phone" 
+                    name="phone" 
+                    placeholder="+1 (555) 000-0000">
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label for="password" style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem;">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="At least 6 characters" 
+                    minlength="6"
+                    required>
+            </div>
+
+            <button type="submit" style="width: 100%;">Create Account</button>
+        </form>
+
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+            Already have an account? <a href="login.html" style="color: var(--accent-color); font-weight: 600; text-decoration: none;">Log In</a>
+        </p>
+    </section>
+
+    <footer>
+        <p>Built for campus use • Be honest, be kind — it's somebody's stuff.</p>
+        <p>© 2026 The Pinboard</p>
+    </footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const signupForm = document.getElementById("signupForm");
+    const alertMessage = document.getElementById("alertMessage");
+
+    function showAlert(message, isError = true) {
+        alertMessage.style.display = "block";
+        alertMessage.textContent = message;
+        if (isError) {
+            alertMessage.style.backgroundColor = "#fef2f2";
+            alertMessage.style.color = "#dc2626";
+            alertMessage.style.border = "1px solid #fecaca";
+        } else {
+            alertMessage.style.backgroundColor = "#f0fdf4";
+            alertMessage.style.color = "#16a34a";
+            alertMessage.style.border = "1px solid #bbf7d0";
+        }
+    }
+
+    signupForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const fullname = document.getElementById("fullname").value.trim();
+        const college_id = document.getElementById("college_id").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const password = document.getElementById("password").value;
+
+        try {
+            const response = await fetch("/api/signup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fullname, college_id, email, phone, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showAlert("Account created successfully! Redirecting to your profile...", false);
+                localStorage.setItem("user", JSON.stringify(data.user));
+
+                setTimeout(() => {
+                    window.location.href = "user.html";
+                }, 1000);
+            } else {
+                showAlert(data.message || "Registration failed. Please try again.");
+            }
+        } catch (error) {
+            console.error("Signup error:", error);
+            showAlert("Server error. Please check your connection or try again later.");
+        }
+    });
+});
+</script>
+
+</body>
+</html>
