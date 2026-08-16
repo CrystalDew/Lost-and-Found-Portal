@@ -46,5 +46,5 @@ Bash
 node server.js
 Open your browser and navigate to:
 
- http://localhost:3000
+http://localhost:3000/
 
