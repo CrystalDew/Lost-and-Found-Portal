@@ -36,38 +36,6 @@ Ensure you have the following installed on your machine:
 ### 2. Database Setup
 Create a PostgreSQL database (e.g., `pinboard_db`) and set up the necessary tables:
 
-```sql
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    fullname VARCHAR(100) NOT NULL,
-    college_id VARCHAR(50) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    phone VARCHAR(20),
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE items (
-    id SERIAL PRIMARY KEY,
-    item_name VARCHAR(150) NOT NULL,
-    category VARCHAR(50),
-    location VARCHAR(150) NOT NULL,
-    item_date DATE NOT NULL,
-    item_time TIME,
-    description TEXT,
-    contact VARCHAR(100) NOT NULL,
-    type VARCHAR(10) CHECK (type IN ('LOST', 'FOUND')),
-    status VARCHAR(20) DEFAULT 'ACTIVE',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-3. Installation & Run
-Clone the repository:
-
-Bash
-git clone [https://github.com/your-username/the-pinboard.git](https://github.com/your-username/the-pinboard.git)
-cd the-pinboard
-Install dependencies:
-
 Bash
 npm install
 Configure your database credentials inside db.js.
@@ -79,13 +47,4 @@ node server.js
 Open your browser and navigate to:
 
  http://localhost:3000
-📜 Community Guidelines
-Post only genuine lost or found items.
 
-Always use your official college email when registering.
-
-Meet in safe, public campus areas when returning items to fellow students.
-
-📄 License
-This project is open-source and built for student campus use.
-© 2026 The Pinboard.
