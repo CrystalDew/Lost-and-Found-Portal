@@ -24,19 +24,7 @@
 
 ---
 
-## 📁 Project Structure
 
-├── db.js          # PostgreSQL database connection setup
-├── server.js      # Express server & API endpoints
-├── portal.html    # Main public feed & search page
-├── user.html      # Student profile & post management page
-├── login.html     # User authentication (Sign In)
-├── signup.html    # Student registration (Sign Up)
-├── lost.html      # Form to post a lost item
-├── found.html     # Form to post a found item
-├── style.css      # Main styling sheet
-└── README.md      # Project documentation
----
 
 ## ⚡ Getting Started Locally
 
@@ -90,7 +78,7 @@ Bash
 node server.js
 Open your browser and navigate to:
 
-http://localhost:3000
+ http://localhost:3000
 📜 Community Guidelines
 Post only genuine lost or found items.
 
