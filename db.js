@@ -1,11 +1,14 @@
-const { Pool } = require("pg");
+const { Pool } = require('pg');
 
 const pool = new Pool({
-    user: "postgres",
-    host: "localhost",
-    database: "LostFoundDB",
-    password: "sql123",
-    port: 5432
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Required for Neon cloud database connection
+  }
+});
+
+pool.on('connect', () => {
+  console.log('Connected to PostgreSQL Database (Neon)');
 });
 
 module.exports = pool;
