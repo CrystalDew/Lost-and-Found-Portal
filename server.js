@@ -1,159 +1,146 @@
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
-const pool = require("./db");
-const bcrypt = require("bcryptjs");
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const bcrypt = require('bcrypt');
+const pool = require('./db');
 
 const app = express();
-const PORT = 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static frontend files (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname)));
 
+// Root Route - Serves the login page by default
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+// ================= USER AUTHENTICATION ROUTES =================
+
 // Signup Route
-app.post("/api/signup", async (req, res) => {
-    try {
-        const { fullname, college_id, email, phone, password } = req.body;
+app.post('/api/signup', async (req, res) => {
+  const { fullname, college_id, email, phone, password } = req.body;
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const result = await pool.query(
-            `INSERT INTO users
-            (fullname, college_id, email, phone, password_hash)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, fullname, email, college_id`,
-            [fullname, college_id, email, phone, hashedPassword]
-        );
-
-        res.status(201).json({
-            message: "Signup successful!",
-            user: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error("Signup error:", error);
-        res.status(500).json({
-            message: "Signup failed",
-            error: error.message
-        });
+  try {
+    // Check if user already exists
+    const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'User with this email already exists' });
     }
+
+    // Hash the password
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    // Insert user into database
+    const newUser = await pool.query(
+      'INSERT INTO users (fullname, college_id, email, phone, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, fullname, email',
+      [fullname, college_id, email, phone, password_hash]
+    );
+
+    res.status(201).json({ message: 'User registered successfully', user: newUser.rows[0] });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Server error during signup' });
+  }
 });
 
-// Login Route (Supports bcrypt and plain-text fallback for test/legacy data)
-app.post("/api/login", async (req, res) => {
-    try {
-        const { email, password } = req.body;
+// Login Route
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
 
-        const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-        if (result.rows.length === 0) {
-            return res.status(400).json({ message: "Invalid email or password" });
-        }
-
-        const user = result.rows[0];
-        const storedPassword = user.password_hash || user.password;
-
-        if (!storedPassword) {
-            return res.status(400).json({ message: "Invalid email or password" });
-        }
-
-        let isMatch = false;
-        if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$")) {
-            isMatch = await bcrypt.compare(password, storedPassword);
-        } else {
-            isMatch = (password === storedPassword);
-        }
-
-        if (!isMatch) {
-            return res.status(400).json({ message: "Invalid email or password" });
-        }
-
-        res.json({
-            message: "Login successful!",
-            user: { 
-                id: user.id, 
-                fullname: user.fullname, 
-                email: user.email,
-                college_id: user.college_id
-            }
-        });
-
-    } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ message: "Login failed", error: error.message });
+  try {
+    // Find user by email
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
+
+    const user = result.rows[0];
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Invalid email or password' });
+    }
+
+    res.json({
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        college_id: user.college_id
+      }
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login' });
+  }
 });
 
-// Fetch All Items
-app.get("/api/items", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT * FROM items ORDER BY created_at DESC");
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Fetch Items Error:", error);
-        res.status(500).json({ message: "Failed to fetch items" });
-    }
+// ================= LOST & FOUND ITEMS ROUTES =================
+
+// Get all lost/found items
+app.get('/api/items', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM items ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch items error:', err);
+    res.status(500).json({ error: 'Failed to fetch items' });
+  }
 });
 
-// Post Lost/Found Item
-app.post("/api/items", async (req, res) => {
-    try {
-        const { title, category, type, location, item_date, item_time, description, contact } = req.body;
+// Add a new item (Lost or Found)
+app.post('/api/items', async (req, res) => {
+  const { item_name, category, location, item_date, item_time, description, contact, type } = req.body;
 
-        const result = await pool.query(
-            `INSERT INTO items (item_name, category, location, item_date, item_time, description, contact, type)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING *`,
-            [
-                title, 
-                category, 
-                location, 
-                item_date, 
-                item_time || null, 
-                description, 
-                contact, 
-                type ? type.toUpperCase() : 'LOST'
-            ]
-        );
+  try {
+    const newItem = await pool.query(
+      `INSERT INTO items (item_name, category, location, item_date, item_time, description, contact, type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [item_name, category, location, item_date, item_time, description, contact, type]
+    );
 
-        res.status(201).json({ message: "Item posted successfully!", item: result.rows[0] });
-    } catch (error) {
-        console.error("Database insert error:", error);
-        res.status(500).json({ message: "Failed to post item", error: error.message });
-    }
+    res.status(201).json({ message: 'Item reported successfully', item: newItem.rows[0] });
+  } catch (err) {
+    console.error('Add item error:', err);
+    res.status(500).json({ error: 'Failed to add item' });
+  }
 });
 
-// Update Item to Claimed
-app.put("/api/items/:id/claim", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await pool.query(
-            "UPDATE items SET status = 'CLAIMED' WHERE id = $1 RETURNING *",
-            [id]
-        );
+// Mark item as resolved/claimed
+app.put('/api/items/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // e.g., 'RESOLVED' or 'CLAIMED'
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Item not found" });
-        }
+  try {
+    const updatedItem = await pool.query(
+      'UPDATE items SET status = $1 WHERE id = $2 RETURNING *',
+      [status, id]
+    );
 
-        res.json({ message: "Item status updated to CLAIMED", item: result.rows[0] });
-    } catch (error) {
-        console.error("Claim Item Error:", error);
-        res.status(500).json({ message: "Failed to update item status" });
+    if (updatedItem.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
     }
+
+    res.json({ message: 'Item status updated', item: updatedItem.rows[0] });
+  } catch (err) {
+    console.error('Update item error:', err);
+    res.status(500).json({ error: 'Failed to update item status' });
+  }
 });
 
-// Page Routes
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "portal.html")));
-app.get("/portal.html", (req, res) => res.sendFile(path.join(__dirname, "portal.html")));
-app.get("/login.html", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
-app.get("/signup.html", (req, res) => res.sendFile(path.join(__dirname, "signup.html")));
-app.get("/user.html", (req, res) => res.sendFile(path.join(__dirname, "user.html")));
+// ================= SERVER PORT CONFIGURATION =================
 
-// Start Server
+// Render assigns a dynamic port via process.env.PORT
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server is running live on port ${PORT}`);
 });
